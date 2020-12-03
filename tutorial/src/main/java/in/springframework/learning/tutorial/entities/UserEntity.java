@@ -1,6 +1,7 @@
 package in.springframework.learning.tutorial.entities;
 
 import javax.persistence.*;
+import java.util.Date;
 
 @Entity
 @Table(name = "user", uniqueConstraints =
@@ -49,6 +50,30 @@ public class UserEntity {
         this.email = email;
     }
 
+    public long getMask() {
+        return mask;
+    }
+
+    public void setMask(long mask) {
+        this.mask = mask;
+    }
+
+    public String getAuthToken() {
+        return authToken;
+    }
+
+    public void setAuthToken(String authToken) {
+        this.authToken = authToken;
+    }
+
+    public Date getExpiry() {
+        return expiry;
+    }
+
+    public void setExpiry(Date expiry) {
+        this.expiry = expiry;
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
@@ -58,4 +83,7 @@ public class UserEntity {
     private String password;
     @Column(length = 128)
     private String email;
+    private long mask;
+    private String authToken;
+    private Date expiry;
 }

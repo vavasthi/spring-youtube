@@ -6,6 +6,7 @@ import in.springframework.learning.tutorial.exceptions.UserDoesnotExist;
 import in.springframework.learning.tutorial.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.swing.text.html.Option;
@@ -18,6 +19,8 @@ public class UserEndpoint {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public Iterable<UserEntity> getUsers() {
@@ -37,6 +40,7 @@ public class UserEndpoint {
         if (oue.isPresent()) {
             throw new UserAlreadyExists(userEntity.getEmail(), userEntity.getUsername());
         }
+        userEntity.setPassword(passwordEncoder.encode(userEntity.getPassword()));
         return Optional.of(userRepository.save(userEntity));
     }
     @RequestMapping(value = "/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -60,8 +64,8 @@ public class UserEndpoint {
              * The object is found and we need to update it.
              */
             if (updatedObject.getPassword()!= null &&
-                    !updatedObject.getPassword().equals(storedObject.getPassword())) {
-                storedObject.setPassword(updatedObject.getPassword());
+                    !passwordEncoder.matches(updatedObject.getPassword(), storedObject.getPassword())) {
+                storedObject.setPassword(passwordEncoder.encode(updatedObject.getPassword()));
             }
             if (updatedObject.getEmail() != null &&
                     !updatedObject.getEmail().equals(storedObject.getEmail())) {
