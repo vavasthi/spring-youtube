@@ -4,7 +4,10 @@ import in.springframework.learning.tutorial.entities.UserEntity;
 import in.springframework.learning.tutorial.pojos.LoginRequest;
 import in.springframework.learning.tutorial.pojos.LoginResponse;
 import in.springframework.learning.tutorial.repositories.UserRepository;
+import in.springframework.learning.tutorial.security.TokenPrincipal;
 import in.springframework.learning.tutorial.security.UsernamePasswordPrincipal;
+import in.springframework.learning.tutorial.utils.ExpiryValues;
+import in.springframework.learning.tutorial.utils.TokenUtilities;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -24,6 +27,7 @@ public class AuthenticationEndpoint {
 
     @Autowired
     private UserRepository userRepository;
+
     @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public LoginResponse login(@RequestBody LoginRequest loginRequest,
                                Authentication authentication) {
@@ -35,9 +39,61 @@ public class AuthenticationEndpoint {
             Optional<UserEntity> oue = userRepository.findUserByUsername(principal.getName());
             if (oue.isPresent()) {
                 UserEntity ue = oue.get();
-                return new LoginResponse(loginRequest.getUsername(), ue.getAuthToken(), ue.getExpiry());
+                refreshTokens(ue);
+                return new LoginResponse(loginRequest.getUsername(),
+                        ue.getAuthToken(),
+                        ue.getExpiry(),
+                        ue.getRefreshToken(),
+                        ue.getRefershExpiry());
             }
         }
         throw new BadCredentialsException(String.format("Authentication endpoint FATAL error for user %s", principal.getName()));
+    }
+
+    @RequestMapping(value = "/validate", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public LoginResponse validated(Authentication authentication) {
+
+        TokenPrincipal principal
+                = TokenPrincipal.class.cast(authentication.getPrincipal());
+        Optional<UserEntity> oue = userRepository.findUserByUsername(principal.getName());
+        if (oue.isPresent()) {
+            UserEntity ue = oue.get();
+            return new LoginResponse(principal.getUsername().get(),
+                    ue.getAuthToken(),
+                    ue.getExpiry(),
+                    ue.getRefreshToken(),
+                    ue.getRefershExpiry());
+        }
+        throw new BadCredentialsException(String.format("Authentication endpoint FATAL error for user %s", principal.getName()));
+    }
+
+    @RequestMapping(value = "/refresh", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public LoginResponse refresh(Authentication authentication) {
+
+        TokenPrincipal principal
+                = TokenPrincipal.class.cast(authentication.getPrincipal());
+        Optional<UserEntity> oue = userRepository.findUserByUsername(principal.getName());
+        if (oue.isPresent()) {
+            UserEntity ue = oue.get();
+            refreshTokens(ue);
+            return new LoginResponse(principal.getUsername().get(),
+                    ue.getAuthToken(),
+                    ue.getExpiry(),
+                    ue.getRefreshToken(),
+                    ue.getRefershExpiry());
+        }
+        throw new BadCredentialsException(String.format("Authentication endpoint FATAL error for user %s", principal.getName()));
+    }
+
+    private void refreshTokens(UserEntity ue) {
+
+        String authToken = TokenUtilities.generateToken();
+        String refreshToken = TokenUtilities.generateToken();
+        ExpiryValues ev = TokenUtilities.generateTokenExiry();
+        ue.setAuthToken(authToken);
+        ue.setRefreshToken(refreshToken);
+        ue.setExpiry(ev.getExpiry());
+        ue.setRefershExpiry(ev.getRefreshExpiry());
+        userRepository.save(ue);
     }
 }

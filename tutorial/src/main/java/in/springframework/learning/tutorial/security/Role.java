@@ -10,10 +10,14 @@ public enum Role {
     REFRESH(0x01 << 3),
     ANONYMOUS(0x01 << 4);
 
-    private final int mask;
+    private final long mask;
 
     Role(int mask) {
         this.mask = mask;
+    }
+
+    public long getMask() {
+        return mask;
     }
 
     public static Set<Role> createFromMask(long mask) {

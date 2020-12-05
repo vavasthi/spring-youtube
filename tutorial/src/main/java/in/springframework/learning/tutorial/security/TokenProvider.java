@@ -9,6 +9,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 
@@ -30,16 +31,39 @@ public class TokenProvider implements AuthenticationProvider {
         if (principal.getUsername().isPresent() && principal.getToken().isPresent()) {
             String username = principal.getUsername().get();
             String token = principal.getToken().get();
-            Optional<UserEntity> oue = userRepository.findUserByAuthToken(token);
+            Optional<UserEntity> oue = Optional.empty();
+            if (principal.getTypeOfToken().equals(TokenPrincipal.TYPE_OF_TOKEN.REFRESH_TOKEN)) {
+
+                oue = userRepository.findUserByRefreshToken(token);
+            }
+            else {
+
+                oue = userRepository.findUserByAuthToken(token);
+            }
             if (oue.isPresent()) {
                 UserEntity ue = oue.get();
-                if (ue.getExpiry().after(new Date())) {
+                username = ue.getUsername();
+                if (principal.getTypeOfToken().equals(TokenPrincipal.TYPE_OF_TOKEN.REFRESH_TOKEN)) {
+                    if (ue.getRefershExpiry().after(new Date())) {
 
-                    return new PreAuthenticatedAuthenticationToken(new TokenPrincipal(Optional.of(ue.getUsername()),
-                            principal.getToken()),
-                            null,
-                            UserAuthority.getAuthoritiesFromRoles(ue.getMask()));
+                        return new PreAuthenticatedAuthenticationToken(new TokenPrincipal(Optional.of(ue.getUsername()),
+                                TokenPrincipal.TYPE_OF_TOKEN.AUTH_TOKEN,
+                                principal.getToken()),
+                                null,
+                                UserAuthority.getAuthoritiesFromRoles(Role.REFRESH.getMask()));
+                    }
                 }
+                else {
+                    if (ue.getExpiry().after(new Date())) {
+
+                        return new PreAuthenticatedAuthenticationToken(new TokenPrincipal(Optional.of(ue.getUsername()),
+                                TokenPrincipal.TYPE_OF_TOKEN.AUTH_TOKEN,
+                                principal.getToken()),
+                                null,
+                                UserAuthority.getAuthoritiesFromRoles(ue.getMask()));
+                    }
+                }
+
             }
             throw new BadCredentialsException(String.format("Username %s, authentication failure.", username));
         }

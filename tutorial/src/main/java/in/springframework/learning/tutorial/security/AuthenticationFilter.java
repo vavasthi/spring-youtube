@@ -32,6 +32,7 @@ public class AuthenticationFilter extends GenericFilterBean {
     public AuthenticationFilter(AuthenticationManager authenticationManager) {
         this.authenticationManager = authenticationManager;
     }
+
     @Override
     public void doFilter(ServletRequest servletRequest,
                          ServletResponse servletResponse,
@@ -59,10 +60,14 @@ public class AuthenticationFilter extends GenericFilterBean {
             }
             else {
 
+                TokenPrincipal.TYPE_OF_TOKEN typeOfToken = TokenPrincipal.TYPE_OF_TOKEN.AUTH_TOKEN;
+                if (httpRequest.getRequestURI().toString().equals("/authenticate/refresh")) {
+                    typeOfToken = TokenPrincipal.TYPE_OF_TOKEN.REFRESH_TOKEN;
+                }
                 Optional<String> token = Optional.ofNullable(httpRequest.getHeader(TOKEN_HEADER));
                 if (token.isPresent()) {
 
-                    TokenPrincipal principal = new TokenPrincipal(token);
+                    TokenPrincipal principal = new TokenPrincipal(typeOfToken, token);
                     PreAuthenticatedAuthenticationToken requestToken
                             = new PreAuthenticatedAuthenticationToken(principal, null);
                     Authentication responseAuthentication = authenticationManager.authenticate(requestToken);

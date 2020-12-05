@@ -2,6 +2,7 @@ package in.springframework.learning.tutorial.security;
 
 import in.springframework.learning.tutorial.entities.UserEntity;
 import in.springframework.learning.tutorial.repositories.UserRepository;
+import in.springframework.learning.tutorial.utils.TokenUtilities;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -36,12 +37,6 @@ public class UsernamePasswordProvider implements AuthenticationProvider {
             if (oue.isPresent()) {
                 UserEntity ue = oue.get();
                 if (passwordEncoder.matches(password, ue.getPassword())) {
-
-                    ue.setAuthToken(generateToken());
-                    Calendar calendar = Calendar.getInstance();
-                    calendar.setTime(new Date());
-                    calendar.add(Calendar.HOUR, 24);
-                    ue.setExpiry(calendar.getTime());
                     return new UsernamePasswordAuthenticationToken(principal,
                             null,
                             UserAuthority.getAuthoritiesFromRoles(ue.getMask()));
@@ -52,9 +47,6 @@ public class UsernamePasswordProvider implements AuthenticationProvider {
         throw new BadCredentialsException("Authenticaton request invalid, either username or password was not present");
     }
 
-    private String generateToken() {
-        return UUID.randomUUID().toString() + "-" + UUID.randomUUID().toString();
-    }
     @Override
     public boolean supports(Class<?> authentication) {
         return authentication.equals(UsernamePasswordAuthenticationToken.class);
