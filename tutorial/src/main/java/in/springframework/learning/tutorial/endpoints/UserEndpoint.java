@@ -1,11 +1,14 @@
 package in.springframework.learning.tutorial.endpoints;
 
+import in.springframework.learning.tutorial.annotations.AuthenticatedUserOrAdmin;
+import in.springframework.learning.tutorial.annotations.ListOutputAllForAdminOrCurrentUser;
 import in.springframework.learning.tutorial.entities.UserEntity;
 import in.springframework.learning.tutorial.exceptions.UserAlreadyExists;
 import in.springframework.learning.tutorial.exceptions.UserDoesnotExist;
 import in.springframework.learning.tutorial.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,10 +26,13 @@ public class UserEndpoint {
     private PasswordEncoder passwordEncoder;
 
     @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ListOutputAllForAdminOrCurrentUser
     public Iterable<UserEntity> getUsers() {
         return userRepository.findAll();
     }
+
     @RequestMapping(value = "/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @AuthenticatedUserOrAdmin
     public Optional<UserEntity> getUser(@PathVariable("id") Long id) {
         Optional<UserEntity> oue = userRepository.findById(id);
         if (oue.isPresent()) {
@@ -35,7 +41,7 @@ public class UserEndpoint {
         throw new UserDoesnotExist(id);
     }
     @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Optional<UserEntity> createtUser(@RequestBody UserEntity userEntity) {
+    public Optional<UserEntity> createUser(@RequestBody UserEntity userEntity) {
         Optional<UserEntity> oue = userRepository.findUserEntityByEmailOrUsername(userEntity.getEmail(), userEntity.getUsername());
         if (oue.isPresent()) {
             throw new UserAlreadyExists(userEntity.getEmail(), userEntity.getUsername());
@@ -44,6 +50,7 @@ public class UserEndpoint {
         return Optional.of(userRepository.save(userEntity));
     }
     @RequestMapping(value = "/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @AuthenticatedUserOrAdmin
     public Optional<UserEntity> deleteUser(@PathVariable("id") Long id) {
         Optional<UserEntity> oue = userRepository.findById(id);
         if (oue.isPresent()) {
@@ -54,6 +61,7 @@ public class UserEndpoint {
         throw new UserDoesnotExist(id);
     }
     @RequestMapping(value = "/{id}", method = RequestMethod.PATCH, produces = MediaType.APPLICATION_JSON_VALUE)
+    @AuthenticatedUserOrAdmin
     public Optional<UserEntity> deleteUser(@PathVariable("id") Long id,
                                            @RequestBody UserEntity updatedObject) {
         Optional<UserEntity> oue = userRepository.findById(id);

@@ -104,6 +104,7 @@ public class AuthenticationFilter extends GenericFilterBean {
                 handleExceptionMsg(HttpStatus.UNAUTHORIZED.value(), bce.getMessage(), response);
             }
             else {
+                ex.printStackTrace();
                 throw new InternalAuthenticationServiceException("Unknown error");
             }
         } catch (IOException e) {
