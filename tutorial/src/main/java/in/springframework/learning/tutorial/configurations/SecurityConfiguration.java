@@ -1,6 +1,7 @@
 package in.springframework.learning.tutorial.configurations;
 
 import in.springframework.learning.tutorial.security.AuthenticationFilter;
+import in.springframework.learning.tutorial.security.TokenProvider;
 import in.springframework.learning.tutorial.security.UsernamePasswordProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,6 +28,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.authenticationProvider(usernamePasswordProvider());
+        auth.authenticationProvider(tokenProvider());
     }
 
     @Override
@@ -53,5 +55,9 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
     @Bean
     public AuthenticationProvider usernamePasswordProvider() {
         return new UsernamePasswordProvider();
+    }
+    @Bean
+    public AuthenticationProvider tokenProvider() {
+        return new TokenProvider();
     }
 }

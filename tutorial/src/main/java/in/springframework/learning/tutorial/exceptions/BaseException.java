@@ -17,4 +17,12 @@ public class BaseException extends RuntimeException {
     public BaseException(String message, Throwable cause) {
         super(message, cause);
     }
+
+    public int getErrorCode() {
+        return errorCode;
+    }
+
+    public void setErrorCode(int errorCode) {
+        this.errorCode = errorCode;
+    }
 }

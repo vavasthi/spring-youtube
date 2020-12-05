@@ -14,5 +14,8 @@ public interface UserRepository extends CrudRepository<UserEntity, Long> {
                                                          @Param("username") String username);
 
     @Query("SELECT ue from UserEntity ue where ue.username = :username")
-    Optional<UserEntity> findUserByUsername(String username);
+    Optional<UserEntity> findUserByUsername(@Param("username") String username);
+
+    @Query("SELECT ue from UserEntity ue where ue.authToken = :authToken")
+    Optional<UserEntity> findUserByAuthToken(@Param("authToken") String authToken);
 }
