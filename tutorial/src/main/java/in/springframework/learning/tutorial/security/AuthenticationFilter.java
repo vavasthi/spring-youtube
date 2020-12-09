@@ -43,10 +43,23 @@ public class AuthenticationFilter extends GenericFilterBean {
         HttpServletResponse httpResponse = HttpServletResponse.class.cast(servletResponse);
         try {
 
-            if (httpRequest.getRequestURI().toString().equals("/authenticate")) {
+            if (httpRequest.getRequestURI().toString().equals("/authenticate") ||
+                    (httpRequest.getRequestURI().toString().equals("/user") &&
+                            httpRequest.getMethod().equals("POST"))) {
                 Optional<String> username = Optional.of(httpRequest.getHeader(USERNAME_HEADER));
-                Optional<String> password = Optional.of(httpRequest.getHeader(PASSWORD_HEADER));
+                Optional<String> password = Optional.ofNullable(httpRequest.getHeader(PASSWORD_HEADER));
                 UsernamePasswordPrincipal principal = new UsernamePasswordPrincipal(username, password);
+                /**
+                 * If the URI is authenticate then we expect both the username and password, if the
+                 * URI is /user and method is POST, then we only expect username and it is a
+                 * new user creation request.
+                 */
+                if (httpRequest.getRequestURI().toString().equals("/user") &&
+                        httpRequest.getMethod().equals("POST")) {
+
+                    principal = new UsernamePasswordPrincipal(username);
+
+                }
                 UsernamePasswordAuthenticationToken requestToken
                         = new UsernamePasswordAuthenticationToken(principal, password);
                 Authentication responseAuthentication = authenticationManager.authenticate(requestToken);

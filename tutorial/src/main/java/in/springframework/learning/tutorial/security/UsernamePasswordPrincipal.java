@@ -9,6 +9,13 @@ public class UsernamePasswordPrincipal implements Principal {
                                      Optional<String> password) {
         this.username = username;
         this.password = password;
+        this.isNewUser = false;
+    }
+
+    public UsernamePasswordPrincipal(Optional<String> username) {
+        this.username = username;
+        this.password = Optional.empty();
+        this.isNewUser = true;
     }
 
     public Optional<String> getUsername() {
@@ -19,10 +26,15 @@ public class UsernamePasswordPrincipal implements Principal {
         return password;
     }
 
+    public boolean isNewUser() {
+        return isNewUser;
+    }
+
     @Override
     public String getName() {
         return username.get();
     }
     private final Optional<String> username;
     private final Optional<String> password;
+    private final boolean isNewUser;
 }

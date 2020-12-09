@@ -8,7 +8,8 @@ public enum Role {
     TESTER(0x01 << 1),
     ADMIN(0x01 << 2),
     REFRESH(0x01 << 3),
-    ANONYMOUS(0x01 << 4);
+    ANONYMOUS(0x01 << 4),
+    NEW_USER(0x01 <<5);
 
     private final long mask;
 

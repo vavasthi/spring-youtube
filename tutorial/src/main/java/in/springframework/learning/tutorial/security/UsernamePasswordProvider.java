@@ -1,8 +1,8 @@
 package in.springframework.learning.tutorial.security;
 
 import in.springframework.learning.tutorial.entities.UserEntity;
+import in.springframework.learning.tutorial.exceptions.UserAlreadyExists;
 import in.springframework.learning.tutorial.repositories.UserRepository;
-import in.springframework.learning.tutorial.utils.TokenUtilities;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -13,10 +13,8 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.transaction.Transactional;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.Arrays;
 import java.util.Optional;
-import java.util.UUID;
 
 public class UsernamePasswordProvider implements AuthenticationProvider {
 
@@ -29,8 +27,23 @@ public class UsernamePasswordProvider implements AuthenticationProvider {
     @Override
     @Transactional
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
-        UsernamePasswordPrincipal principal = UsernamePasswordPrincipal.class.cast(authentication.getPrincipal());
-        if (principal.getUsername().isPresent() && principal.getPassword().isPresent()) {
+        UsernamePasswordPrincipal principal
+                = UsernamePasswordPrincipal.class.cast(authentication.getPrincipal());
+        if (principal.isNewUser()) {
+
+            String username = principal.getUsername().get();
+            Optional<UserEntity> oue = userRepository.findUserByUsername(username);
+            if (oue.isPresent()) {
+                throw new UserAlreadyExists(username);
+            }
+            else {
+
+                return new UsernamePasswordAuthenticationToken(principal,
+                        null,
+                        UserAuthority.getAuthoritiesFromRoles(Arrays.asList(Role.NEW_USER)));
+            }
+        }
+        else if (principal.getUsername().isPresent() && principal.getPassword().isPresent()) {
             String username = principal.getUsername().get();
             String password = principal.getPassword().get();
             Optional<UserEntity> oue = userRepository.findUserByUsername(username);

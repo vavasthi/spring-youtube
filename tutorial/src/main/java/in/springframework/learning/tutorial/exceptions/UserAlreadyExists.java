@@ -10,6 +10,10 @@ public class UserAlreadyExists extends BaseException {
         this.email = email;
         this.username = username;
     }
+    public UserAlreadyExists(String username) {
+        super(HttpStatus.CONFLICT.value(), String.format("Duplicate username ", username));
+        this.username = username;
+    }
 
     public UserAlreadyExists() {
     }
