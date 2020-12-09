@@ -44,7 +44,7 @@ public class AuthenticationEndpoint {
                         ue.getAuthToken(),
                         ue.getExpiry(),
                         ue.getRefreshToken(),
-                        ue.getRefershExpiry());
+                        ue.getRefreshExpiry());
             }
         }
         throw new BadCredentialsException(String.format("Authentication endpoint FATAL error for user %s", principal.getName()));
@@ -62,7 +62,7 @@ public class AuthenticationEndpoint {
                     ue.getAuthToken(),
                     ue.getExpiry(),
                     ue.getRefreshToken(),
-                    ue.getRefershExpiry());
+                    ue.getRefreshExpiry());
         }
         throw new BadCredentialsException(String.format("Authentication endpoint FATAL error for user %s", principal.getName()));
     }
@@ -80,7 +80,7 @@ public class AuthenticationEndpoint {
                     ue.getAuthToken(),
                     ue.getExpiry(),
                     ue.getRefreshToken(),
-                    ue.getRefershExpiry());
+                    ue.getRefreshExpiry());
         }
         throw new BadCredentialsException(String.format("Authentication endpoint FATAL error for user %s", principal.getName()));
     }
@@ -93,7 +93,7 @@ public class AuthenticationEndpoint {
         ue.setAuthToken(authToken);
         ue.setRefreshToken(refreshToken);
         ue.setExpiry(ev.getExpiry());
-        ue.setRefershExpiry(ev.getRefreshExpiry());
+        ue.setRefreshExpiry(ev.getRefreshExpiry());
         userRepository.save(ue);
     }
 }

@@ -8,8 +8,8 @@ import java.util.Date;
         {
                 @UniqueConstraint(name = "uq_email", columnNames = {"email"}),
                 @UniqueConstraint(name = "uq_username", columnNames = {"username"}),
-                @UniqueConstraint(name = "uq_authToken", columnNames = {"authToken"}),
-                @UniqueConstraint(name = "uq_refreshToken", columnNames = {"refreshToken"})
+                @UniqueConstraint(name = "uq_authToken", columnNames = {"auth_token"}),
+                @UniqueConstraint(name = "uq_refreshToken", columnNames = {"refresh_token"})
         })
 public class UserEntity {
     public Long getId() {
@@ -84,12 +84,12 @@ public class UserEntity {
         this.refreshToken = refreshToken;
     }
 
-    public Date getRefershExpiry() {
-        return refershExpiry;
+    public Date getRefreshExpiry() {
+        return refreshExpiry;
     }
 
-    public void setRefershExpiry(Date refershExpiry) {
-        this.refershExpiry = refershExpiry;
+    public void setRefreshExpiry(Date refreshExpiry) {
+        this.refreshExpiry = refreshExpiry;
     }
 
     @Id
@@ -102,8 +102,11 @@ public class UserEntity {
     @Column(length = 128)
     private String email;
     private long mask;
+    @Column(name = "auth_token")
     private String authToken;
     private Date expiry;
+    @Column(name = "refresh_token")
     private String refreshToken;
-    private Date refershExpiry;
+    @Column(name = "refresh_expiry")
+    private Date refreshExpiry;
 }

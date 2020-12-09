@@ -44,7 +44,7 @@ public class TokenProvider implements AuthenticationProvider {
                 UserEntity ue = oue.get();
                 username = ue.getUsername();
                 if (principal.getTypeOfToken().equals(TokenPrincipal.TYPE_OF_TOKEN.REFRESH_TOKEN)) {
-                    if (ue.getRefershExpiry().after(new Date())) {
+                    if (ue.getRefreshExpiry().after(new Date())) {
 
                         return new PreAuthenticatedAuthenticationToken(new TokenPrincipal(Optional.of(ue.getUsername()),
                                 TokenPrincipal.TYPE_OF_TOKEN.AUTH_TOKEN,
