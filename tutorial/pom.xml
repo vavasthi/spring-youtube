@@ -13,10 +13,10 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>tutorial</name>
 	<description>Tutorial for learning spring framework</description>
-
 	<properties>
 		<java.version>1.8</java.version>
 		<maven.compiler.plugin.version>3.8.1</maven.compiler.plugin.version>
+		<project.image.prefix>tutorial</project.image.prefix>
 	</properties>
 
 	<dependencies>
@@ -105,6 +105,13 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>repackage</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -119,6 +126,44 @@
 				<groupId>pl.project13.maven</groupId>
 				<artifactId>git-commit-id-plugin</artifactId>
 				<version>4.0.3</version>
+			</plugin>
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.34.1</version>
+				<configuration>
+					<images>
+						<image>
+							<name>${project.image.prefix}/${project.artifactId}</name>
+							<build>
+								<from>java:8</from>
+								<assembly>
+									<descriptorRef>artifact-with-dependencies</descriptorRef>
+								</assembly>
+								<cmd>
+									<shell>java -jar /maven/${project.build.finalName}.jar</shell>
+								</cmd>
+							</build>
+							<run>
+								<ports>
+									<port>3306:3306</port>
+									<port>5432:5432</port>
+									<port>8080:8080</port>
+									<port>9091:9091</port>
+								</ports>
+							</run>
+						</image>
+					</images>
+				</configuration>
+				<executions>
+					<execution>
+						<id>build-image</id>
+						<phase>package</phase>
+						<goals>
+							<goal>build</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>

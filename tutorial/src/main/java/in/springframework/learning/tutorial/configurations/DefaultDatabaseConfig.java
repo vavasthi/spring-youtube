@@ -35,6 +35,8 @@ public class DefaultDatabaseConfig {
     private String password;
     @Value("${spring.jpa.hibernate.ddl-auto}")
     private String ddlAuto;
+    @Value("${spring.jpa.properties.hibernate.dialect}")
+    private String dialect;
 
     @Primary
     @Bean(name = "dataSource")
@@ -55,6 +57,7 @@ public class DefaultDatabaseConfig {
 
         Properties properties = new Properties();
         properties.setProperty("hibernate.hbm2ddl-auto", ddlAuto);
+        properties.setProperty("hibernate.dialect", dialect);
         LocalContainerEntityManagerFactoryBean bean
                 = builder
                 .dataSource(dataSource)
