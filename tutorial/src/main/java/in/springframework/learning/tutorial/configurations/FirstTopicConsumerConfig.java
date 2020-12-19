@@ -3,12 +3,14 @@ package in.springframework.learning.tutorial.configurations;
 import in.springframework.learning.tutorial.deserializer.TutorialMessageDeserializer;
 import in.springframework.learning.tutorial.pojos.TutorialMessage;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.serialization.UUIDDeserializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -33,6 +35,8 @@ public class FirstTopicConsumerConfig {
         configProperties.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroupId);
         configProperties.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, UUIDDeserializer.class);
         configProperties.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, TutorialMessageDeserializer.class);
+        configProperties.put(ConsumerConfig.MAX_POLL_INTERVAL_MS_CONFIG, 1000000);
+        configProperties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
         return new DefaultKafkaConsumerFactory<>(configProperties);
     }
 
@@ -42,6 +46,8 @@ public class FirstTopicConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<UUID, TutorialMessage> factory
                 = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory(consumerGroup1));
+        factory.setBatchListener(true);
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         return factory;
     }
     @Bean(name = "firstTopicSecondGroupContainerFactory")
@@ -50,6 +56,7 @@ public class FirstTopicConsumerConfig {
         ConcurrentKafkaListenerContainerFactory<UUID, TutorialMessage> factory
                 = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory(consumerGroup2));
+        factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
         return factory;
     }
 }

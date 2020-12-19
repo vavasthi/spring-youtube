@@ -11,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @Log4j2
@@ -29,19 +30,22 @@ public class TutorialTopicMessageSenderEndpoint {
     @RequestMapping(value = "/{topic}",
             method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     @AuthenticatedUserOrAdmin
-    public TutorialMessage sendMessage(@PathVariable("topic") String topic,
-                                       @RequestBody TutorialMessage message) {
+    public List<TutorialMessage> sendMessage(@PathVariable("topic") String topic,
+                                       @RequestBody List<TutorialMessage> messages) {
 
-        if (topic.equals(TutorialConstants.FIRST_TOPIC_NAME)) {
-            firstTopicTemplate.send(topic, UUID.randomUUID(), message);
+        for (TutorialMessage message : messages) {
+
+            if (topic.equals(TutorialConstants.FIRST_TOPIC_NAME)) {
+                firstTopicTemplate.send(topic, UUID.randomUUID(), message);
+            }
+            else if(topic.equals(TutorialConstants.SECOND_TOPIC_NAME)) {
+                secondTopicTemplate.send(topic, UUID.randomUUID(), message);
+            }
+            else {
+                throw new BadRequestException(String.format("%s is an invalid topic type"));
+            }
         }
-        else if(topic.equals(TutorialConstants.SECOND_TOPIC_NAME)) {
-            secondTopicTemplate.send(topic, UUID.randomUUID(), message);
-        }
-        else {
-            throw new BadRequestException(String.format("%s is an invalid topic type"));
-        }
-        log.info("Message " + message.toString() + " sent successfully!");
-        return message;
+        log.info(String.format("%d messages  sent successfully!", messages.size()));
+        return messages;
     }
 }
