@@ -32,6 +32,17 @@ public class TutorialCustomExpressionRoot extends SecurityExpressionRoot impleme
         }
         return false;
     }
+    public boolean  operationForCurrentUser(String usernameOrEmail) {
+        Optional<String> optionalUsername = TokenPrincipal.class.cast(this.getPrincipal()).getUsername();
+        if (optionalUsername.isPresent()) {
+            String username = optionalUsername.get();
+            Optional<UserEntity> oue = userRepository.findUserEntityByEmailOrUsername(usernameOrEmail, usernameOrEmail);
+            if (oue.isPresent()) {
+                return oue.get().getUsername().equals(username);
+            }
+        }
+        return false;
+    }
 
     @Override
     public void setFilterObject(Object filterObject) {
