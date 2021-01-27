@@ -1,15 +1,13 @@
 package in.springframework.learning.tutorial.security;
 
-import in.springframework.learning.tutorial.entities.UserEntity;
+import in.springframework.learning.tutorial.pojos.User;
 import in.springframework.learning.tutorial.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 
@@ -31,7 +29,7 @@ public class TokenProvider implements AuthenticationProvider {
         if (principal.getUsername().isPresent() && principal.getToken().isPresent()) {
             String username = principal.getUsername().get();
             String token = principal.getToken().get();
-            Optional<UserEntity> oue = Optional.empty();
+            Optional<User> oue = Optional.empty();
             if (principal.getTypeOfToken().equals(TokenPrincipal.TYPE_OF_TOKEN.REFRESH_TOKEN)) {
 
                 oue = userRepository.findUserByRefreshToken(token);
@@ -41,7 +39,7 @@ public class TokenProvider implements AuthenticationProvider {
                 oue = userRepository.findUserByAuthToken(token);
             }
             if (oue.isPresent()) {
-                UserEntity ue = oue.get();
+                User ue = oue.get();
                 username = ue.getUsername();
                 if (principal.getTypeOfToken().equals(TokenPrincipal.TYPE_OF_TOKEN.REFRESH_TOKEN)) {
                     if (ue.getRefreshExpiry().after(new Date())) {

@@ -1,5 +1,6 @@
 package in.springframework.learning.tutorial.pojos;
 
+import lombok.Builder;
 import lombok.Data;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
@@ -13,6 +14,7 @@ import javax.persistence.Id;
 @CompoundIndexes({
         @CompoundIndex(name = "course_student_id", def = "{'courseId':1, 'studentId':2}")
 })
+@Builder
 public class CoursesEnrolled {
     public enum Status {
         Enrolled,

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.UUID;
 
-@Component
+//@Component
 @Log4j2
 public class TutorialTopicKafkaListener {
 

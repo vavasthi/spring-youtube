@@ -1,6 +1,6 @@
 package in.springframework.learning.tutorial.security;
 
-import in.springframework.learning.tutorial.entities.UserEntity;
+import in.springframework.learning.tutorial.pojos.User;
 import in.springframework.learning.tutorial.exceptions.UserAlreadyExists;
 import in.springframework.learning.tutorial.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +32,7 @@ public class UsernamePasswordProvider implements AuthenticationProvider {
         if (principal.isNewUser()) {
 
             String username = principal.getUsername().get();
-            Optional<UserEntity> oue = userRepository.findUserByUsername(username);
+            Optional<User> oue = userRepository.findUserByUsername(username);
             if (oue.isPresent()) {
                 throw new UserAlreadyExists(username);
             }
@@ -46,9 +46,9 @@ public class UsernamePasswordProvider implements AuthenticationProvider {
         else if (principal.getUsername().isPresent() && principal.getPassword().isPresent()) {
             String username = principal.getUsername().get();
             String password = principal.getPassword().get();
-            Optional<UserEntity> oue = userRepository.findUserByUsername(username);
+            Optional<User> oue = userRepository.findUserByUsername(username);
             if (oue.isPresent()) {
-                UserEntity ue = oue.get();
+                User ue = oue.get();
                 if (passwordEncoder.matches(password, ue.getPassword())) {
                     return new UsernamePasswordAuthenticationToken(principal,
                             null,

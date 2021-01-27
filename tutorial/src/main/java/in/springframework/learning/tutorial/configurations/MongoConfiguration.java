@@ -49,7 +49,8 @@ public class MongoConfiguration extends   AbstractMongoClientConfiguration {
         return new MongoTemplate(mongoClient(), database);
     }
     private String getConnectionString() {
-        return String.format("mongodb://%s:%d", host, port);
+//        return String.format("mongodb://%s:%d", host, port);
+        return String.format("mongodb+srv://%s:%d", host, port);
     }
     @Override
     protected String getDatabaseName() {

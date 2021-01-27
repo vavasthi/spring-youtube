@@ -1,10 +1,8 @@
 package in.springframework.learning.tutorial.customexpressions;
 
-import in.springframework.learning.tutorial.endpoints.UserEndpoint;
-import in.springframework.learning.tutorial.entities.UserEntity;
+import in.springframework.learning.tutorial.pojos.User;
 import in.springframework.learning.tutorial.repositories.UserRepository;
 import in.springframework.learning.tutorial.security.TokenPrincipal;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.expression.SecurityExpressionRoot;
 import org.springframework.security.access.expression.method.MethodSecurityExpressionOperations;
 import org.springframework.security.core.Authentication;
@@ -25,7 +23,7 @@ public class TutorialCustomExpressionRoot extends SecurityExpressionRoot impleme
         Optional<String> optionalUsername = TokenPrincipal.class.cast(this.getPrincipal()).getUsername();
         if (optionalUsername.isPresent()) {
             String username = optionalUsername.get();
-            Optional<UserEntity> oue = userRepository.findUserByUsername(username);
+            Optional<User> oue = userRepository.findUserByUsername(username);
             if (oue.isPresent()) {
                 return oue.get().getId().equals(id);
             }
