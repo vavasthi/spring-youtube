@@ -38,5 +38,5 @@ public class Statistics {
     private Date startTime;
     @Indexed
     private Date endTime;
-    private Long milliseconds;
+    private Long nanoseconds;
 }

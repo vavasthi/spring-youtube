@@ -17,6 +17,6 @@ public class Performance {
     @Id
     private String id;
     private String testType;
-    private ArrayList<String> progress = new ArrayList<>();
+    private ArrayList<String> progress;
     private STATUS status;
 }

@@ -9,6 +9,7 @@ import in.springframework.learning.tutorial.repositories.CourseEnrolledRepositor
 import in.springframework.learning.tutorial.repositories.CourseOfferedRepository;
 import in.springframework.learning.tutorial.services.PerformanceService;
 import in.springframework.learning.tutorial.services.StudentService;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
+@Log4j2
 @RestController
 @RequestMapping("/performance")
 public class PerformanceEndpoint {
@@ -30,7 +32,7 @@ public class PerformanceEndpoint {
 
     ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(5);
 
-    @RequestMapping(value = "/test1", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/run/test1", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public Optional<Performance> runTest1() {
 
         final Performance perf = Performance.builder()
@@ -47,9 +49,14 @@ public class PerformanceEndpoint {
                 performance.getProgress().add("Completed");
                 performance.setStatus(Performance.STATUS.COMPLETE);
                 performanceService.save(performance);
-
+                log.info(String.format("Performance run %s Completed.", performance.getId()));
             }
         });
         return Optional.of(performance);
+    }
+    @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public List<Performance> getAllTests() {
+
+        return performanceService.findAll();
     }
 }

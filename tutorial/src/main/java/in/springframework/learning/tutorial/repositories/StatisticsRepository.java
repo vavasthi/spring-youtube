@@ -9,4 +9,6 @@ import java.util.List;
 
 public interface StatisticsRepository extends MongoRepository<Statistics, String> {
 
+    @Query("{'performanceRunId' : ?0}")
+    List<Statistics> findAllByPerformanceRunId(String performanceRunId);
 }

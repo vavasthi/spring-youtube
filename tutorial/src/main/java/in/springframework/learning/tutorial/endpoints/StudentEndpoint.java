@@ -1,27 +1,17 @@
 package in.springframework.learning.tutorial.endpoints;
 
-import in.springframework.learning.tutorial.ds.entities.TimeSeriesEntity;
-import in.springframework.learning.tutorial.ds.repositories.TimeSeriesRepository;
 import in.springframework.learning.tutorial.exceptions.EntityDoesnotExist;
-import in.springframework.learning.tutorial.pojos.*;
+import in.springframework.learning.tutorial.pojos.CourseOffered;
+import in.springframework.learning.tutorial.pojos.CoursesEnrolled;
+import in.springframework.learning.tutorial.pojos.Student;
 import in.springframework.learning.tutorial.repositories.CourseEnrolledRepository;
 import in.springframework.learning.tutorial.repositories.CourseOfferedRepository;
-import in.springframework.learning.tutorial.repositories.StatisticsRepository;
-import in.springframework.learning.tutorial.repositories.StudentRepository;
 import in.springframework.learning.tutorial.services.StudentService;
-import in.springframework.learning.tutorial.utils.RandomUtilities;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.PostConstruct;
-import javax.transaction.Transactional;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/student")

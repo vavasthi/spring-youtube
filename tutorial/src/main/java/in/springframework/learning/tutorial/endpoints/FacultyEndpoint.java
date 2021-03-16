@@ -41,7 +41,7 @@ public class FacultyEndpoint {
     }
 
     @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public Optional<Faculty> putTimeSeries(@RequestBody Faculty faculty) {
+    public Optional<Faculty> createFaculty(@RequestBody Faculty faculty) {
 
         return Optional.of(facultyRepository.save(faculty));
     }

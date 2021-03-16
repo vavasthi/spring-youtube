@@ -17,4 +17,6 @@ public class Student {
     @Indexed
     private String name;
     private String city;
+    @Indexed
+    private boolean base;
 }

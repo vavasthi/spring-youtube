@@ -1,5 +1,7 @@
 package in.springframework.learning.tutorial.services;
 
+import com.mongodb.client.AggregateIterable;
+import com.mongodb.client.model.Aggregates;
 import in.springframework.learning.tutorial.pojos.*;
 import in.springframework.learning.tutorial.repositories.CourseEnrolledRepository;
 import in.springframework.learning.tutorial.repositories.CourseOfferedRepository;
@@ -7,7 +9,11 @@ import in.springframework.learning.tutorial.repositories.PerformanceRepository;
 import in.springframework.learning.tutorial.repositories.StatisticsRepository;
 import in.springframework.learning.tutorial.utils.RandomUtilities;
 import lombok.extern.log4j.Log4j2;
+import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -15,10 +21,7 @@ import javax.transaction.Transactional;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,12 +38,16 @@ public class PerformanceService {
     private StudentService studentService;
     @Autowired
     private PerformanceRepository performanceRepository;
+    private final int cachedStudents = 10;
+
+    private List<Student> randomStudents = new ArrayList<>();
+    private List<CourseOffered> randomCourses;
 
     private SecureRandom random = new SecureRandom();
 
-    private CourseOffered[] courseOffered;
-    private String[] studentIds;
-
+    public List<Performance> findAll() {
+        return performanceRepository.findAll();
+    }
 
     public enum TEST_TYPE {
         TEST1("runTest1"),
@@ -57,30 +64,22 @@ public class PerformanceService {
         initialize();
     }
     public void initialize() {
-
-        courseOffered = courseOfferedRepository.findAll().toArray(new CourseOffered[0]);
-        studentIds = studentService.findAll().stream().map(Student::getId).collect(Collectors.toList()).toArray(new String[0]);
+        randomCourses = courseOfferedRepository.findAll();
     }
     public Performance save(Performance performance) {
         return performanceRepository.save(performance);
     }
-    public CourseOffered getRandomCourseOffered() {
+    public Iterable<Student> getRandomStudent(int count) {
 
-        return courseOffered[random.nextInt(courseOffered.length)];
+        return randomStudents;
     }
-    public Optional<Student> getRandomStudent() {
+    public List<String> getRandomStudentId(int count) {
 
-        return studentService.findById(studentIds[random.nextInt(studentIds.length)]);
+        return randomStudents.stream().map(s -> s.getId()).collect(Collectors.toList());
     }
-    public String getRandomStudentId() {
+    public void runTest(Performance performance)  {
 
-        return studentIds[random.nextInt(studentIds.length)];
-    }
-    public void runTest(Performance perf)  {
-
-        Optional<Performance> optionalPerformance = performanceRepository.findById(perf.getId());
         log.info("Running test.");
-        Performance performance = optionalPerformance.get();
         TEST_TYPE testType = TEST_TYPE.valueOf(performance.getTestType());
         Method m = null;
         try {
@@ -120,11 +119,11 @@ public class PerformanceService {
         log.info(String.format("Query IN id @ base %d and count %d", base, count));
         queryStudentByName(performance);
         log.info(String.format("Query by index @ base %d and count %d", base, count));
-        queryStudentInName(10L, performance);
+        queryStudentInName(10, performance);
         log.info(String.format("Query IN index @ base %d and count %d", base, count));
         queryStudentInCity(performance);
         log.info(String.format("Query by unindex @ base %d and count %d", base, count));
-        queryStudentInCities(10L, performance);
+        queryStudentInCities(10, performance);
         log.info(String.format("Query IN unindex @ base %d and count %d", base, count));
         performance.getProgress().add(String.format("Persistence and query done for base %d and count %d", base, count));
     }
@@ -155,33 +154,66 @@ public class PerformanceService {
         log.info("Running test 1" + performance.getId());
     }
     @Transactional
-    public List<Student> createRandom(Long base,
-                                      Long count,
-                                      Performance performance) {
-        studentService.adjustBase(base, studentIds);
+    public void createRandom(Long base,
+                             Long count,
+                             Performance performance) {
+
+        List<Student> studentList = new ArrayList<>();
+        studentService.deleteByBase(false);
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        if (studentService.count() != base) {
+
+            log.info("Base has changed. Clearing old data.");
+            randomStudents.clear();
+            studentService.deleteAll();
+            addStudentRecords(base, cachedStudents, true);
+        }
         Date startTime = new Date();
         long nanoStartTime = System.nanoTime();
+        addStudentRecords(base + count - studentService.count(), cachedStudents, false);
+        if (performance != null) {
+
+            saveStatistics(startTime, nanoStartTime, Statistics.OPERATION_TYPE.INSERT, Statistics.RECORD_TYPE.STUDENT, count, performance);
+        }
+    }
+    private void addStudentRecords(long count, int cacheSize, boolean base) {
         List<Student> studentList = new ArrayList<>();
-        for (long i = studentService.count(); i < base + count; ++i) {
+        for (long i = 0; i < count; ++i) {
+            if (studentList.size() >= 10000) {
+                List<Student> savedStudents = studentService.saveAll(studentList);
+                if (randomStudents.size() < cacheSize) {
+                    while (savedStudents.size() > 0 && randomStudents.size() < cacheSize) {
+                        randomStudents.add(savedStudents.remove(0));
+                    }
+                }
+                studentList.clear();
+            }
             studentList.add(Student.builder()
                     .name(RandomUtilities.createRandomName())
                     .city(RandomUtilities.createRandomCity())
+                    .base(base)
                     .build());
         }
-        if (performance != null) {
+        if (studentList.size() > 0) {
 
-            studentList =  studentService.saveAll(studentList);
-            saveStatistics(startTime, nanoStartTime, Statistics.OPERATION_TYPE.INSERT, Statistics.RECORD_TYPE.STUDENT, count, performance);
+            List<Student> savedStudents = studentService.saveAll(studentList);
+            if (randomStudents.size() < 10) {
+                while (savedStudents.size() > 0 && randomStudents.size() < 10) {
+                    randomStudents.add(savedStudents.remove(0));
+                }
+            }
         }
-        studentIds = studentService.findAll().stream().map(Student::getId).collect(Collectors.toList()).toArray(new String[0]);
-        return studentList;
     }
     public Optional<Student> queryById(Performance performance) {
 
+        String id = getRandomStudentId(1).get(0);
         Date startTime = new Date();
         long nanoStartTime = System.nanoTime();
-        Optional<Student> students
-                = studentService.findById(getRandomStudentId());
+        Optional<Student> students = studentService.findById(id);
         if (performance != null) {
 
             saveStatistics(startTime, nanoStartTime, Statistics.OPERATION_TYPE.QUERY, Statistics.RECORD_TYPE.STUDENT, 1, performance);
@@ -190,45 +222,41 @@ public class PerformanceService {
     }
     public Iterable<Student> queryByIdIn(int count, Performance performance) {
 
-        List<String> ids = new ArrayList<>();
-        for (int i = 0; i < count; ++i) {
-            ids.add(getRandomStudentId());
-        }
+        Iterable<String> ids = getRandomStudentId(count);
         Date startTime = new Date();
         long nanoStartTime = System.nanoTime();
-        Iterable<Student> students
-                = studentService.findByIdIn(ids);
+        Iterable<Student> students = studentService.findByIdIn(ids);
         if (performance != null) {
 
             saveStatistics(startTime, nanoStartTime, Statistics.OPERATION_TYPE.QUERY_IN_ID, Statistics.RECORD_TYPE.STUDENT, count, performance);
         }
         return students;
     }
-    public List<Student> queryStudentInCity(Performance performance) {
+    public Iterable<Student> queryStudentInCity(Performance performance) {
 
-        List<String> cities = new ArrayList<>();
+        Iterable<Student> students = getRandomStudent(1);
+        Student student = students.iterator().next();
         Date startTime = new Date();
         long nanoStartTime = System.nanoTime();
-        List<Student> studentList = new ArrayList<>();
-        List<Student> students
-                = studentService.findByCity(RandomUtilities.createRandomCity());
+        students = studentService.findByCity(student.getCity());
         if (performance != null) {
 
             saveStatistics(startTime, nanoStartTime, Statistics.OPERATION_TYPE.QUERY_UNINDEXED, Statistics.RECORD_TYPE.STUDENT, 1, performance);
         }
         return students;
     }
-    public List<Student> queryStudentInCities(Long count,
+    public Iterable<Student> queryStudentInCities(int count,
                                               Performance performance) {
 
         List<String> cities = new ArrayList<>();
-        for (int i = 0; i < count; ++i) {
-            cities.add(RandomUtilities.createRandomCity());
+        Iterable<Student> students = getRandomStudent(count);
+        for (Student s : students) {
+            cities.add(s.getCity());
         }
         Date startTime = new Date();
         long nanoStartTime = System.nanoTime();
         List<Student> studentList = new ArrayList<>();
-        List<Student> students = studentService.findByCityIn(cities);
+        students = studentService.findByCityIn(cities);
         if (performance != null) {
 
             saveStatistics(startTime, nanoStartTime, Statistics.OPERATION_TYPE.QUERY_IN_UNINDEXED, Statistics.RECORD_TYPE.STUDENT, count, performance);
@@ -237,8 +265,8 @@ public class PerformanceService {
     }
     public List<Student> queryStudentByName(Performance performance) {
 
-        Optional<Student> optionalStudent = getRandomStudent();
-        Student student = optionalStudent.get();
+        Iterable<Student> students = getRandomStudent(1);
+        Student student = students.iterator().next();
         Date startTime = new Date();
         long nanoStartTime = System.nanoTime();
         List<Student> studentList = studentService.findByName(student.getName());
@@ -248,17 +276,17 @@ public class PerformanceService {
         }
         return studentList;
     }
-    public List<Student> queryStudentInName(Long count,
+    public Iterable<Student> queryStudentInName(int count,
                                             Performance performance) {
 
+        Iterable<Student> students = getRandomStudent(count);
         List<String> names = new ArrayList<>();
-        for (int i = 0; i < count; ++i) {
-            names.add(getRandomStudent().get().getName());
+        for (Student s : students) {
+            names.add(s.getName());
         }
         Date startTime = new Date();
         long nanoStartTime = System.nanoTime();
-        List<Student> studentList = new ArrayList<>();
-        List<Student> students = studentService.findByNameIn(names);
+        students = studentService.findByNameIn(names);
         if (performance != null) {
 
             saveStatistics(startTime, nanoStartTime, Statistics.OPERATION_TYPE.QUERY_IN_INDEXED, Statistics.RECORD_TYPE.STUDENT, count, performance);
@@ -266,21 +294,25 @@ public class PerformanceService {
         return students;
     }
     @Transactional
-    public List<CoursesEnrolled> randomEnrolOfferedCourse(long count, Performance performance) {
+    public List<CoursesEnrolled> randomEnrolOfferedCourse(int count, Performance performance) {
 
         List<CoursesEnrolled> coursesEnrolledArrayList = new ArrayList<>();
         Date startTime = new Date();
         long nanoStartTime = System.nanoTime();
         for (int i = 0; i < count; ++i) {
 
-            CourseOffered chosenCourse = getRandomCourseOffered();
-            Student chosenStudent = getRandomStudent().get();
-            coursesEnrolledArrayList.add(CoursesEnrolled.builder()
-                    .courseId(chosenCourse.getCourseId())
-                    .courseOfferedId(chosenCourse.getId())
-                    .status(CoursesEnrolled.Status.Enrolled)
-                    .studentId(chosenStudent.getId())
-                    .build());
+            Iterable<Student> chosenStudents = getRandomStudent(count);
+            while(randomCourses.iterator().hasNext()) {
+
+                CourseOffered chosenCourse = randomCourses.iterator().next();
+                Student chosenStudent = chosenStudents.iterator().next();
+                coursesEnrolledArrayList.add(CoursesEnrolled.builder()
+                        .courseId(chosenCourse.getCourseId())
+                        .courseOfferedId(chosenCourse.getId())
+                        .status(CoursesEnrolled.Status.Enrolled)
+                        .studentId(chosenStudent.getId())
+                        .build());
+            }
         }
         coursesEnrolledArrayList  =  courseEnrolledRepository.saveAll(coursesEnrolledArrayList);
         if (performance != null) {
@@ -305,7 +337,7 @@ public class PerformanceService {
                 .recordType(recordType)
                 .operationType(operationType)
                 .performanceRunId(performance.getId())
-                .milliseconds(System.nanoTime() - nanoStartTime)
+                .nanoseconds(System.nanoTime() - nanoStartTime)
                 .build());
     }
 }

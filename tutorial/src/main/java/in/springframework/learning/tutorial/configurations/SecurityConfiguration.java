@@ -43,6 +43,7 @@ public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
         http.addFilterBefore(new AuthenticationFilter(authenticationManager()), BasicAuthenticationFilter.class);
     }
 
+
     @Override
     public void configure(WebSecurity web) throws Exception {
         web.ignoring().antMatchers("/error");

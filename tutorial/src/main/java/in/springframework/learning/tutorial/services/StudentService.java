@@ -5,6 +5,7 @@ import in.springframework.learning.tutorial.repositories.CourseEnrolledRepositor
 import in.springframework.learning.tutorial.repositories.StatisticsRepository;
 import in.springframework.learning.tutorial.repositories.StudentRepository;
 import in.springframework.learning.tutorial.utils.RandomUtilities;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +15,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
+@Log4j2
 @Service
 public class StudentService {
 
@@ -69,13 +71,12 @@ public class StudentService {
         return studentRepository.findByNameIn(names);
     }
 
-    public void adjustBase(Long base, String[] studentIds) {
+    public Iterable<Student> findAllById(List<String> ids) {
+        return studentRepository.findAllById(ids);
+    }
+    public void deleteByBase(boolean base) {
 
-        long existing = studentRepository.count();
-        if (existing > base) {
-            for (int i = 0; i < existing - base; ++i) {
-                studentRepository.deleteById(studentIds[i]);
-            }
-        }
+         Long count = studentRepository.deleteStudentByBase(base);
+         log.info(String.format("Deleting %d students for base = %s", count, base));
     }
 }

@@ -14,4 +14,8 @@ public interface StudentRepository extends MongoRepository<Student, String> {
     List<Student> findByName(String name);
 
     List<Student> findByNameIn(List<String> names);
+
+    Iterable<? extends Student> findByBase(boolean base);
+
+    Long deleteStudentByBase(boolean base);
 }
