@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.util.List;
 
 @Data
-public class Contained1Entity implements Serializable {
+public class Contained1Entity extends CachedEntity<String> implements Serializable  {
 
     @Id
     private String id;

@@ -3,19 +3,19 @@ package in.springframework.learning.tutorial.caching;
 import in.springframework.learning.tutorial.annotations.DefineCache;
 import in.springframework.learning.tutorial.annotations.RelatedCache;
 import in.springframework.learning.tutorial.annotations.RelatedCaches;
+import in.springframework.learning.tutorial.exceptions.EntityDoesnotExist;
+import in.springframework.learning.tutorial.pojos.CachedEntity;
 import in.springframework.learning.tutorial.pojos.Contained1Entity;
-import in.springframework.learning.tutorial.pojos.Contained2Entity;
 import in.springframework.learning.tutorial.pojos.ContainerEntity;
 import in.springframework.learning.tutorial.repositories.Contained1EntityRepository;
-import in.springframework.learning.tutorial.repositories.Contained2EntityRepository;
 import in.springframework.learning.tutorial.repositories.ContainerEntityRepository;
 import in.springframework.learning.tutorial.utils.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Optional;
 
 @DefineCache(name = Constants.CONTAINED_1_CACHE_NAME,
@@ -53,7 +53,20 @@ public class Contained1CacheService extends Physical1CacheService<String, Contai
     public Optional<Contained1Entity> delete(String id)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
-        return delete(id, Contained1Entity.class, Contained1EntityRepository.class);
+        Optional<Contained1Entity> optionalContained1Entity = repository.findById(id);
+        if (optionalContained1Entity.isPresent()) {
+
+            Contained1Entity entity = optionalContained1Entity.get();
+            Optional<ContainerEntity> optionalContainerEntity =
+                    containerEntityRepository.findById(entity.getContainerId());
+            if (optionalContainerEntity.isPresent()) {
+                ContainerEntity containerEntity = optionalContainerEntity.get();
+                containerEntity.getContained1().remove(entity.getId());
+                containerEntityRepository.save(containerEntity);
+                return delete(id, Contained1Entity.class, Contained1EntityRepository.class);
+            }
+        }
+        throw new EntityDoesnotExist(String.format("Contained1 %s doesn't exist", id));
     }
 
     @Override
@@ -62,21 +75,22 @@ public class Contained1CacheService extends Physical1CacheService<String, Contai
 
         Optional<ContainerEntity> optionalContainerEntity =
                 containerEntityRepository.findById(entity.getContainerId());
-        Optional<Contained1Entity> optionalContained1Entity
-                = create(entity, Contained1Entity.class, Contained1EntityRepository.class);
         if (optionalContainerEntity.isPresent()) {
             ContainerEntity containerEntity = optionalContainerEntity.get();
             if (containerEntity.getContained1() == null) {
-                containerEntity.setContained1(new ArrayList<>());
+                containerEntity.setContained1(new HashSet<>());
             }
+            Optional<Contained1Entity> optionalContained1Entity
+                    = create(entity, Contained1Entity.class, Contained1EntityRepository.class);
             containerEntity.getContained1().add(optionalContained1Entity.get().getId());
             containerEntityRepository.save(containerEntity);
+            return optionalContained1Entity;
         }
-        return optionalContained1Entity;
+        throw new EntityDoesnotExist(String.format("Container %s doesn't exist.", entity.getContainerId()));
     }
     @Override
     public Optional<Contained1Entity> update(String id,
-                                 Contained1Entity entity)
+                                             Contained1Entity entity)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         return update(id, entity, Contained1Entity.class, Contained1EntityRepository.class);

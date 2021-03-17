@@ -38,6 +38,13 @@ public class ContainerEndpoint {
         return containerCacheService.findById(id);
     }
 
+    @RequestMapping(value = "/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public Optional<ContainerEntity> deleteContainer(@PathVariable("id") String id)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return containerCacheService.delete(id);
+    }
+
     @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public Optional<ContainerEntity> createContainer(@RequestBody ContainerEntity containerEntity)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
@@ -63,7 +70,7 @@ public class ContainerEndpoint {
 
         return contained1CacheService.findAll();
     }
-    @RequestMapping(value = "/contained2", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/contained2", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public Iterable<Contained2Entity> getContained2()
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
@@ -75,7 +82,7 @@ public class ContainerEndpoint {
 
         return contained1CacheService.delete(id);
     }
-    @RequestMapping(value = "/contained2/{id}", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = "/contained2/{id}", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public Optional<Contained2Entity> deleteContained2(@PathVariable("id") String id)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 

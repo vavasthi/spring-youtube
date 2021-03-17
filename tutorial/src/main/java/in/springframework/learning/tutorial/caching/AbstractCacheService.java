@@ -19,8 +19,7 @@ package in.springframework.learning.tutorial.caching;
 import in.springframework.learning.tutorial.annotations.*;
 import in.springframework.learning.tutorial.exceptions.CacheKeyAnnotationAbsent;
 import in.springframework.learning.tutorial.exceptions.NoMatchingkeyCombinationsExist;
-import in.springframework.learning.tutorial.pojos.Contained1Entity;
-import in.springframework.learning.tutorial.repositories.Contained1EntityRepository;
+import in.springframework.learning.tutorial.pojos.CachedEntity;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,7 +35,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
-public abstract class AbstractCacheService<I, E> {
+public abstract class AbstractCacheService<I, E extends CachedEntity<I> > {
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -105,9 +104,9 @@ public abstract class AbstractCacheService<I, E> {
             }
         }
     }
-    protected Optional<E> evictObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+    protected Optional<E > evictObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
                                       I id,
-                                      Class<E> entityClass,
+                                      Class<E > entityClass,
                                       Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
@@ -118,28 +117,29 @@ public abstract class AbstractCacheService<I, E> {
         E entity = null;
         if (optionalEntity.isPresent()) {
             entity = optionalEntity.get();
-        }
-        if (cacheKeys == null) {
+            if (cacheKeys == null) {
 
-            redisTemplate.delete(keyPrefixForCache);
-        } else {
-            if (cacheKeys.keys().length > 0 && optionalEntity.isPresent()) {
-                List<KeyPrefixForCache> keys = new ArrayList<>();
-                keys.add(keyPrefixForCache);
-                for (CacheKey ck : cacheKeys.keys()) {
-                    keys.add(getKey(ck, entity));
+                redisTemplate.delete(keyPrefixForCache);
+            } else {
+                if (cacheKeys.keys().length > 0 && optionalEntity.isPresent()) {
+                    List<KeyPrefixForCache> keys = new ArrayList<>();
+                    keys.add(keyPrefixForCache);
+                    for (CacheKey ck : cacheKeys.keys()) {
+                        keys.add(getKey(ck, entity));
+                    }
+                    redisTemplate.delete(keys);
                 }
-                redisTemplate.delete(keys);
             }
+            evictRelatedCacheObject(id, entity);
+            return optionalEntity;
         }
-        evictRelatedCacheObject(id, entity);
-        return optionalEntity;
+        return Optional.empty();
     }
 
-    protected Optional<E> delete(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                                 I id,
-                                 Class<E> entityClass,
-                                 Class<? extends CrudRepository> repositoryClass)
+    protected Optional<E > delete(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+                                                I id,
+                                                Class<E > entityClass,
+                                                Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         Optional<E> optionalEntity = findById(redisTemplate, id, entityClass, repositoryClass);
@@ -149,29 +149,31 @@ public abstract class AbstractCacheService<I, E> {
         return optionalEntity;
     }
 
-    protected Optional<E> create(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                                 E entity,
-                                 Class<E> entityClass,
-                                 Class<? extends CrudRepository> repositoryClass)
+    protected Optional<E > create(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+                                                E entity,
+                                                Class<E > entityClass,
+                                                Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         entity = entityClass.cast(applicationContext.getBean(repositoryClass).save(entity));
+        evictRelatedCacheObject(entity.getId(), entity);
         return Optional.of(entity);
     }
     protected Optional<E> update(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
                                  I id,
                                  E entity,
-                                 Class<E> entityClass,
+                                 Class<E > entityClass,
                                  Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         entity = entityClass.cast(applicationContext.getBean(repositoryClass).save(entity));
+        evictRelatedCacheObject(entity.getId(), entity);
         return Optional.of(entity);
     }
 
-    protected Optional<E> findById(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+    protected Optional<E > findById(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
                                              I id,
-                                             Class<E> entityClass,
+                                             Class<E > entityClass,
                                              Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         try {
@@ -209,17 +211,17 @@ public abstract class AbstractCacheService<I, E> {
 
         return redisTemplate.opsForValue().get(new KeyPrefixForCache(getPrefix(), key));
     }
-    protected <V> V getObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                          Object key,
-                          Class<V> vClass)
+    protected  E getObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+                                         Object key,
+                                         Class<E> vClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         return vClass.cast(getObject(redisTemplate, key));
     }
 
-    protected <V> V getObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                          Map<String, Object> keys,
-                          Class<V> vClass)
+    protected E getObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+                                        Map<String, Object> keys,
+                                        Class<E > vClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         List<Object> orderedKey = new ArrayList<>();

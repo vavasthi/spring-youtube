@@ -6,14 +6,15 @@ import lombok.Data;
 import javax.persistence.Id;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Set;
 
 @Data
-public class ContainerEntity implements Serializable {
+public class ContainerEntity extends CachedEntity<String> implements Serializable {
 
     @Id
     private String id;
     private String name;
     private String description;
-    private List<String> contained1;
-    private List<String> contained2;
+    private Set<String> contained1;
+    private Set<String> contained2;
 }

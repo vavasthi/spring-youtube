@@ -1,11 +1,7 @@
 package in.springframework.learning.tutorial.caching;
 
 import in.springframework.learning.tutorial.annotations.DefineCache;
-import in.springframework.learning.tutorial.configurations.FirstRedisConfiguration;
-import in.springframework.learning.tutorial.pojos.Contained1Entity;
-import in.springframework.learning.tutorial.pojos.Contained2Entity;
 import in.springframework.learning.tutorial.pojos.ContainerEntity;
-import in.springframework.learning.tutorial.repositories.Contained1EntityRepository;
 import in.springframework.learning.tutorial.repositories.ContainerEntityRepository;
 import in.springframework.learning.tutorial.utils.Constants;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +32,7 @@ public class ContainerCacheService extends Physical1CacheService<String, Contain
     @Override
     public Optional<ContainerEntity> evict(String id) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
-        return evictObject(id, ContainerEntity.class, Contained1EntityRepository.class);
+        return evictObject(id, ContainerEntity.class, ContainerEntityRepository.class);
     }
     @Override
     public Optional<ContainerEntity> delete(String id)
@@ -53,7 +49,7 @@ public class ContainerCacheService extends Physical1CacheService<String, Contain
     }
     @Override
     public Optional<ContainerEntity> update(String id,
-                                                ContainerEntity entity)
+                                            ContainerEntity entity)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         return update(id, entity, ContainerEntity.class, ContainerEntityRepository.class);

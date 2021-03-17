@@ -2,7 +2,7 @@ package in.springframework.learning.tutorial.pojos;
 
 import java.util.UUID;
 
-public interface CachedEntity<I> {
+public abstract class CachedEntity<I> {
 
-    I getId();
+    public abstract I getId();
 }
