@@ -23,30 +23,39 @@ public class ContainerCacheService extends Physical1CacheService<String, Contain
     private ContainerEntityRepository repository;
 
     @Override
-    protected ContainerEntity findById(String id)
+    public Optional<ContainerEntity> findById(String id)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        try {
-            return getObject(id, ContainerEntity.class);
-        } catch (NoSuchMethodException
-                | IllegalAccessException
-                | InvocationTargetException e) {
-            e.printStackTrace();
-        }
-        Optional<ContainerEntity> optionalEntity = repository.findById(id);
-        if (optionalEntity.isPresent()) {
-            ContainerEntity entity = optionalEntity.get();
-            storeObject(entity.getId(), entity);
-            return entity;
-        }
-        return null;
+
+        return findById(id, ContainerEntity.class, ContainerEntityRepository.class);
     }
     @Override
-    protected ContainerEntity evict(String id) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        ContainerEntity entity = findById(id);
-        if (entity != null) {
+    public Iterable<ContainerEntity> findAll() {
+        return repository.findAll();
+    }
 
-            evictObject(id, entity);
-        }
-        return entity;
+    @Override
+    public Optional<ContainerEntity> evict(String id) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return evictObject(id, ContainerEntity.class, Contained1EntityRepository.class);
+    }
+    @Override
+    public Optional<ContainerEntity> delete(String id)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return delete(id, ContainerEntity.class, ContainerEntityRepository.class);
+    }
+
+    @Override
+    public Optional<ContainerEntity> create(ContainerEntity entity)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return create(entity, ContainerEntity.class, ContainerEntityRepository.class);
+    }
+    @Override
+    public Optional<ContainerEntity> update(String id,
+                                                ContainerEntity entity)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return update(id, entity, ContainerEntity.class, ContainerEntityRepository.class);
     }
 }

@@ -26,14 +26,12 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Service
@@ -53,9 +51,42 @@ public abstract class Physical1CacheService<I, E> extends AbstractCacheService<I
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         storeObject(redisConfiguration.redisTemplate(), key, value);
     }
-    protected void evictObject(Object key,
-                               Object value)
+    protected Optional<E> evictObject(I id,
+                                      Class<E> entityClass,
+                                      Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
-        evictObject(redisConfiguration.redisTemplate(), key, value);
+
+        return evictObject(redisConfiguration.redisTemplate(), id, entityClass, repositoryClass);
+    }
+    public Optional<E> findById(I id,
+                                   Class<E> entityClass,
+                                   Class<? extends CrudRepository> repositoryClass)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return findById(redisConfiguration.redisTemplate(), id, entityClass, repositoryClass);
+    }
+
+    public Optional<E> delete(I id,
+                                 Class<E> entityClass,
+                                 Class<? extends CrudRepository> repositoryClass)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return delete(redisConfiguration.redisTemplate(), id, entityClass, repositoryClass);
+    }
+
+    public Optional<E> create(E entity,
+                              Class<E> entityClass,
+                              Class<? extends CrudRepository> repositoryClass)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return create(redisConfiguration.redisTemplate(), entity, entityClass, repositoryClass);
+    }
+    public Optional<E> update(I id,
+                                 E entity,
+                                 Class<E> entityClass,
+                                 Class<? extends CrudRepository> repositoryClass)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        return update(redisConfiguration.redisTemplate(), id, entity, entityClass, repositoryClass);
     }
 }

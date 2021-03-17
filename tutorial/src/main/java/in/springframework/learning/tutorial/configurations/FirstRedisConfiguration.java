@@ -5,6 +5,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisClusterConfiguration;
 import org.springframework.data.redis.connection.RedisPassword;
+import org.springframework.data.redis.connection.RedisSentinelConfiguration;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.jedis.JedisClientConfiguration;
 import org.springframework.data.redis.connection.jedis.JedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
@@ -22,7 +25,7 @@ public class FirstRedisConfiguration {
     @Value("${redis.first.database:1}")
     private int redisDatabase;
     private
-    @Value("${redis.first.password:null}")
+    @Value("${redis.first.password:}")
     String redisPassword;
     @Value("${redis.first.pool.maxIdle:5}")
     private int maxIdle;
@@ -49,7 +52,21 @@ public class FirstRedisConfiguration {
         poolConfig.setMaxTotal(maxTotal);
 
         if (hosts.length == 1) {
-            return new JedisConnectionFactory(poolConfig);
+            RedisStandaloneConfiguration standaloneConfiguration
+                    = new RedisStandaloneConfiguration();
+            standaloneConfiguration.setDatabase(redisDatabase);
+            String[] hostPort = redisHost.split(":");
+            if (hostPort.length > 1) {
+                standaloneConfiguration.setPort(Integer.valueOf(hostPort[1]));
+            }
+            standaloneConfiguration.setHostName(hostPort[0]);
+            if (redisPassword != null) {
+
+                standaloneConfiguration.setPassword(RedisPassword.of(redisPassword));
+            }
+
+            JedisConnectionFactory factory = new JedisConnectionFactory(standaloneConfiguration);
+            return factory;
         }
         else {
 

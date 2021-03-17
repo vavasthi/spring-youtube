@@ -4,10 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.io.Serializable;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class KeyPrefixForCache {
+public class KeyPrefixForCache implements Serializable {
 
     private String prefix;
     private Object key;

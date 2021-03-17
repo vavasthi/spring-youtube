@@ -4,10 +4,11 @@ import in.springframework.learning.tutorial.annotations.RelatedCaches;
 import lombok.Data;
 
 import javax.persistence.Id;
+import java.io.Serializable;
 import java.util.List;
 
 @Data
-public class ContainerEntity {
+public class ContainerEntity implements Serializable {
 
     @Id
     private String id;

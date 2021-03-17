@@ -1,4 +1,4 @@
-package in.springframework.learning.tutorial.caching;
+package in.springframework.learning.tutorial.pojos;
 
 import java.util.UUID;
 
