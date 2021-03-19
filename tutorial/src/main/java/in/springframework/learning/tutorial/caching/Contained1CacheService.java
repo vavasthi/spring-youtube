@@ -16,15 +16,16 @@ import org.springframework.stereotype.Service;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 
 @DefineCache(name = Constants.CONTAINED_1_CACHE_NAME,
         prefix = Constants.CONTAINED_1_CACHE_PREFIX,
         expiry = Constants.CONTAINED_1_CACHE_EXPIRY)
-@RelatedCaches(name = "contained1",
+/*@RelatedCaches(name = "contained1",
         caches = {
                 @RelatedCache(primaryKeyField = "containerId", clazz = ContainerCacheService.class)
-        })
+        })*/
 @Service
 public class Contained1CacheService extends Physical1CacheService<String, Contained1Entity> {
     @Autowired
@@ -49,6 +50,13 @@ public class Contained1CacheService extends Physical1CacheService<String, Contai
 
         return evictObject(id, Contained1Entity.class, Contained1EntityRepository.class);
     }
+
+    @Override
+    public Iterable<KeyPrefixForCache> getAllKeys(String id, List<KeyPrefixForCache> keys)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        return getAllKeys(id, keys, Contained1Entity.class, Contained1EntityRepository.class);
+    }
+
     @Override
     public Optional<Contained1Entity> delete(String id)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {

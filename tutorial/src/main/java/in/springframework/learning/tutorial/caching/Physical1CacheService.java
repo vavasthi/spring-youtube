@@ -90,4 +90,13 @@ public abstract class Physical1CacheService<I, E extends CachedEntity<I> > exten
 
         return update(redisConfiguration.redisTemplate(), id, entity, entityClass, repositoryClass);
     }
+      public Iterable<KeyPrefixForCache> getAllKeys(I id,
+                                                  List<KeyPrefixForCache> keys,
+                                                  Class<E> entityClass,
+                                                  Class<? extends CrudRepository> repositoryClass)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        return getAllKeys(redisConfiguration.redisTemplate(), id, keys, entityClass, repositoryClass);
+
+    }
+
 }

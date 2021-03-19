@@ -19,15 +19,16 @@ import org.springframework.stereotype.Service;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 
 @DefineCache(name = Constants.CONTAINED_2_CACHE_NAME,
         prefix = Constants.CONTAINED_2_CACHE_PREFIX,
         expiry = Constants.CONTAINED_2_CACHE_EXPIRY)
-@RelatedCaches(name = "contained2",
+/*@RelatedCaches(name = "contained2",
         caches = {
                 @RelatedCache(primaryKeyField = "containerId", clazz = ContainerCacheService.class)
-        })
+        })*/
 @Service
 public class Contained2CacheService extends Physical1CacheService<String, Contained2Entity> {
 
@@ -92,6 +93,12 @@ public class Contained2CacheService extends Physical1CacheService<String, Contai
         }
         throw new EntityDoesnotExist(String.format("Container %s doesn't exist.", entity.getContainerId()));
     }
+    @Override
+    public Iterable<KeyPrefixForCache> getAllKeys(String id, List<KeyPrefixForCache> keys)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+        return getAllKeys(id, keys, Contained2Entity.class, Contained2EntityRepository.class);
+    }
+
     @Override
     public Optional<Contained2Entity> update(String id,
                                              Contained2Entity entity)

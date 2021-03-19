@@ -20,15 +20,21 @@ import in.springframework.learning.tutorial.annotations.*;
 import in.springframework.learning.tutorial.exceptions.CacheKeyAnnotationAbsent;
 import in.springframework.learning.tutorial.exceptions.NoMatchingkeyCombinationsExist;
 import in.springframework.learning.tutorial.pojos.CachedEntity;
+import in.springframework.learning.tutorial.pojos.ClassAttributePair;
+import in.springframework.learning.tutorial.utils.CacheCascadeAnnotationDictionary;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.SessionCallback;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -52,6 +58,8 @@ public abstract class AbstractCacheService<I, E extends CachedEntity<I> > {
     abstract public Iterable<E> findAll();
     abstract public Optional<E> evict(I id)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException;
+    abstract public Iterable<KeyPrefixForCache> getAllKeys(I id, List<KeyPrefixForCache> keys)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException;
     abstract public Optional<E> delete(I id)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException;
     abstract public Optional<E> create(E entity)
@@ -63,6 +71,15 @@ public abstract class AbstractCacheService<I, E extends CachedEntity<I> > {
         return getClass().getAnnotation(DefineCache.class).prefix();
     }
 
+    @PostConstruct
+    private void postConstruct() {
+        CachesCascade cachesCascade = getClass().getDeclaredAnnotation(CachesCascade.class);
+        if (cachesCascade != null && cachesCascade.caches() != null) {
+            for (CacheCascade cc : cachesCascade.caches()) {
+                CacheCascadeAnnotationDictionary.INSTANCE.add(cc.attribute(), getClass(), cc.clazz());
+            }
+        }
+    }
 
     protected void storeObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
                                Object key,
@@ -70,44 +87,77 @@ public abstract class AbstractCacheService<I, E extends CachedEntity<I> > {
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
 
+        Map<KeyPrefixForCache, Object> keyValueMap = new HashMap<>();
+        Map<KeyPrefixForCache, Long> timeoutMap = new HashMap<>();
+        Map<KeyPrefixForCache, Set<Object>> setValueMap = new HashMap<>();
         CacheKeys cacheKeys = getClass().getAnnotation(CacheKeys.class);
-        if (cacheKeys == null) {
+        keyValueMap.put(new KeyPrefixForCache(getPrefix(), key), value);
+        timeoutMap.put(new KeyPrefixForCache(getPrefix(), key), getExpiry());
+        if (cacheKeys != null && cacheKeys.keys().length > 0) {
+            for (CacheKey ck : cacheKeys.keys()) {
+                KeyPrefixForCache kpfc = getKey(ck, value);
+                keyValueMap.put(kpfc, key);
+                timeoutMap.put(kpfc, getExpiry());
+            }
+        }
+        Set<ClassAttributePair> annotationSet =
+                CacheCascadeAnnotationDictionary.INSTANCE.getAnnotationsOnAnnotatedClass(getClass());
+        if (annotationSet != null) {
 
-            redisTemplate.opsForValue().set(new KeyPrefixForCache(getPrefix(), key), value);
-        } else {
-            if (cacheKeys.keys().length > 0) {
-                Map<KeyPrefixForCache, Object> keyValueMap = new HashMap<>();
-                keyValueMap.put(new KeyPrefixForCache(getPrefix(), key), value);
-                for (CacheKey ck : cacheKeys.keys()) {
-                    keyValueMap.put(getKey(ck, value), key);
-                }
-                redisTemplate.opsForValue().multiSet(keyValueMap);
-                for (KeyPrefixForCache kpfc : keyValueMap.keySet()) {
+            for (ClassAttributePair s : annotationSet) {
 
-                    redisTemplate.expire(kpfc, getExpiry(), TimeUnit.SECONDS);
+                Method m = getGetterMethod(value, s.getAttribute());
+                Collection collection = (Collection)m.invoke(value);
+                for (Object v : collection) {
+                    KeyPrefixForCache kpfc = new KeyPrefixForCache(getPrefix(), (I)v);
+                    Set<Object> valueSet = setValueMap.get(kpfc);
+                    if (valueSet == null) {
+                        valueSet = new HashSet<>();
+                        setValueMap.put(kpfc, valueSet);
+                        timeoutMap.put(kpfc, getExpiry());
+                    }
+                    valueSet.add(key);
                 }
             }
         }
-        evictRelatedCacheObject(key, value);
+        redisTemplate.execute(new SessionCallback<Object>() {
+            @Override
+            public <K, V> Object execute(RedisOperations<K, V> redisOperations) throws DataAccessException {
+                redisOperations.multi();
+                for (Map.Entry<KeyPrefixForCache, Object> e : keyValueMap.entrySet()) {
+                    redisOperations.opsForValue().set((K)e.getKey(), (V)e.getValue());
+                }
+                for (Map.Entry<KeyPrefixForCache, Set<Object> > e : setValueMap.entrySet()) {
+                    for (Object v : e.getValue()) {
+
+                        redisOperations.opsForSet().add((K)e.getKey(), (V)v);
+                    }
+                }
+                for (Map.Entry<KeyPrefixForCache, Long> e : timeoutMap.entrySet()) {
+                    redisOperations.expire((K)e.getKey(), e.getValue(), TimeUnit.SECONDS);
+                }
+                return redisOperations.exec();
+            }
+        });
     }
-    private void evictRelatedCacheObject(Object key, Object value)
+
+    protected Optional<E> evictObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+                                      I id,
+                                      Class<E> entityClass,
+                                      Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
-        RelatedCaches relatedCaches = getClass().getAnnotation(RelatedCaches.class);
-        if (relatedCaches != null) {
-
-            for (RelatedCache relatedCache : relatedCaches.caches()) {
-                AbstractCacheService abstractCacheService
-                        = applicationContext.getBean(relatedCache.clazz());
-                Method m = getGetterMethod(value, relatedCache.primaryKeyField());
-                abstractCacheService.evict(m.invoke(value));
-            }
-        }
+        Optional<E> optionalEntity = findById(id);
+        List<KeyPrefixForCache> keys = new ArrayList<>();
+        getAllKeys(redisTemplate, id, keys, entityClass, repositoryClass);
+        redisTemplate.delete(keys);
+        return optionalEntity;
     }
-    protected Optional<E > evictObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                                      I id,
-                                      Class<E > entityClass,
-                                      Class<? extends CrudRepository> repositoryClass)
+    protected Iterable<KeyPrefixForCache> getAllKeys(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+                                                     I id,
+                                                     List<KeyPrefixForCache> keys,
+                                                     Class<E > entityClass,
+                                                     Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
 
@@ -117,29 +167,77 @@ public abstract class AbstractCacheService<I, E extends CachedEntity<I> > {
         E entity = null;
         if (optionalEntity.isPresent()) {
             entity = optionalEntity.get();
-            if (cacheKeys == null) {
-
-                redisTemplate.delete(keyPrefixForCache);
-            } else {
+            keys.add(keyPrefixForCache);
+            if (cacheKeys != null) {
                 if (cacheKeys.keys().length > 0 && optionalEntity.isPresent()) {
-                    List<KeyPrefixForCache> keys = new ArrayList<>();
-                    keys.add(keyPrefixForCache);
                     for (CacheKey ck : cacheKeys.keys()) {
                         keys.add(getKey(ck, entity));
                     }
-                    redisTemplate.delete(keys);
                 }
             }
-            evictRelatedCacheObject(id, entity);
-            return optionalEntity;
+            Set<ClassAttributePair> annotationSet =
+                    CacheCascadeAnnotationDictionary.INSTANCE.getAnnotationsOnAnnotatedClass(getClass());
+            if (annotationSet != null) {
+
+                for (ClassAttributePair cap : annotationSet) {
+
+                    Method m = getGetterMethod(entity, cap.getAttribute());
+                    Collection collection = (Collection)m.invoke(entity);
+                    for (Object v : collection) {
+                        keys.add(new KeyPrefixForCache(getPrefix(), (I)v));
+                    }
+                }
+            }
         }
-        return Optional.empty();
+
+        getAllRelatedKeys(redisTemplate, entity, keys);
+        return keys;
+    }
+
+    private Collection<KeyPrefixForCache> getAllRelatedKeys(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+                                                            E value,
+                                                            List<KeyPrefixForCache> keys)
+            throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+
+        RelatedCaches relatedCaches = getClass().getAnnotation(RelatedCaches.class);
+        if (relatedCaches != null) {
+
+            for (RelatedCache relatedCache : relatedCaches.caches()) {
+                AbstractCacheService abstractCacheService
+                        = applicationContext.getBean(relatedCache.clazz());
+                Method m = getGetterMethod(value, relatedCache.primaryKeyField());
+                I relatedId = (I)m.invoke(value);
+
+                abstractCacheService.getAllKeys(relatedId, keys);
+            }
+        }
+        Set<ClassAttributePair> targetAnnotationSet =
+                CacheCascadeAnnotationDictionary.INSTANCE.getAnnotationsOnTargetClass(getClass());
+        if (targetAnnotationSet != null) {
+
+            for (ClassAttributePair cap : targetAnnotationSet) {
+
+                Method m = getGetterMethod(value, "id");
+                I id = (I)m.invoke(value);
+                AbstractCacheService applicationCacheService = applicationContext.getBean(cap.getClazz());
+                Set<Object> idsi = redisTemplate
+                        .opsForSet()
+                        .members(new KeyPrefixForCache(applicationCacheService.getPrefix(), id));
+                if (idsi != null) {
+                    for (Object k : idsi){
+
+                        applicationCacheService.getAllKeys(k, keys);
+                    }
+                }
+            }
+        }
+        return keys;
     }
 
     protected Optional<E > delete(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                                                I id,
-                                                Class<E > entityClass,
-                                                Class<? extends CrudRepository> repositoryClass)
+                                  I id,
+                                  Class<E > entityClass,
+                                  Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         Optional<E> optionalEntity = findById(redisTemplate, id, entityClass, repositoryClass);
@@ -149,14 +247,14 @@ public abstract class AbstractCacheService<I, E extends CachedEntity<I> > {
         return optionalEntity;
     }
 
-    protected Optional<E > create(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                                                E entity,
-                                                Class<E > entityClass,
-                                                Class<? extends CrudRepository> repositoryClass)
+    protected Optional<E> create(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
+                                 E entity,
+                                 Class<E > entityClass,
+                                 Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         entity = entityClass.cast(applicationContext.getBean(repositoryClass).save(entity));
-        evictRelatedCacheObject(entity.getId(), entity);
+        evictObject(redisTemplate, entity.getId(), entityClass, repositoryClass);
         return Optional.of(entity);
     }
     protected Optional<E> update(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
@@ -167,14 +265,14 @@ public abstract class AbstractCacheService<I, E extends CachedEntity<I> > {
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         entity = entityClass.cast(applicationContext.getBean(repositoryClass).save(entity));
-        evictRelatedCacheObject(entity.getId(), entity);
+        evictObject(redisTemplate, entity.getId(), entityClass, repositoryClass);
         return Optional.of(entity);
     }
 
     protected Optional<E > findById(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                                             I id,
-                                             Class<E > entityClass,
-                                             Class<? extends CrudRepository> repositoryClass)
+                                    I id,
+                                    Class<E > entityClass,
+                                    Class<? extends CrudRepository> repositoryClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
         try {
             E entity = getObject(redisTemplate, id, entityClass);
@@ -212,16 +310,16 @@ public abstract class AbstractCacheService<I, E extends CachedEntity<I> > {
         return redisTemplate.opsForValue().get(new KeyPrefixForCache(getPrefix(), key));
     }
     protected  E getObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                                         Object key,
-                                         Class<E> vClass)
+                           Object key,
+                           Class<E> vClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         return vClass.cast(getObject(redisTemplate, key));
     }
 
     protected E getObject(RedisTemplate<KeyPrefixForCache, Object> redisTemplate,
-                                        Map<String, Object> keys,
-                                        Class<E > vClass)
+                          Map<String, Object> keys,
+                          Class<E > vClass)
             throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
         List<Object> orderedKey = new ArrayList<>();
